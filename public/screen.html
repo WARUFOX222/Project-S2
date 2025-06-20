@@ -4,14 +4,37 @@
 <head>
   <title>Viewer</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { margin: 0; background: black; color: white; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; flex-direction: column; }
+    img { width: 100vw; height: 100vh; object-fit: contain; position: absolute; top: 0; left: 0; }
+    #status { z-index: 1; position: relative; background: rgba(0,0,0,0.6); padding: 10px 20px; border-radius: 10px; }
+  </style>
 </head>
-<body style="margin:0;overflow:hidden;background:black;">
-  <img id="img" style="width:100vw;height:100vh;object-fit:contain;" />
+<body>
+  <img id="img" />
+  <div id="status">🔄 รอกล้องเชื่อมต่อ...</div>
+
   <script>
     const img = document.getElementById('img');
+    const statusText = document.getElementById('status');
+
     const ws = new WebSocket(location.origin.replace(/^http/, 'ws') + '/view');
+
+    ws.onopen = () => {
+      statusText.innerText = "🟢 เชื่อมต่อกับกล้องแล้ว กำลังรอภาพ...";
+    };
+
     ws.onmessage = (event) => {
       img.src = event.data;
+      statusText.style.display = 'none';
+    };
+
+    ws.onerror = (e) => {
+      statusText.innerText = "❌ ไม่สามารถเชื่อมต่อ WebSocket ได้";
+    };
+
+    ws.onclose = () => {
+      statusText.innerText = "🔌 การเชื่อมต่อถูกตัด กรุณารีเฟรชหน้า";
     };
   </script>
 </body>
