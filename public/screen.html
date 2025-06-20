@@ -1,27 +1,56 @@
 <!DOCTYPE html>
-<html>
+<html lang="th">
 <head>
   <meta charset="UTF-8" />
-  <title>Screen</title>
+  <title>📺 จอแสดงภาพจากกล้อง</title>
+  <style>
+    body {
+      margin: 0;
+      background-color: black;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+    canvas {
+      width: 100vw;
+      height: 100vh;
+      object-fit: contain;
+    }
+  </style>
 </head>
-<body style="margin:0; background:black;">
-  <canvas id="canvas" style="width:100vw; height:100vh;"></canvas>
+<body>
+  <canvas id="canvas"></canvas>
   <script>
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
-    const ws = new WebSocket('wss://' + location.hostname + '/ws');
-
     const img = new Image();
 
+    const ws = new WebSocket('wss://' + location.host + '/ws');
+
+    ws.binaryType = "blob";
+
     ws.onmessage = (event) => {
-      const blob = new Blob([event.data], { type: 'image/jpeg' });
-      img.src = URL.createObjectURL(blob);
+      img.src = URL.createObjectURL(event.data);
     };
 
     img.onload = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    };
+
+    ws.onopen = () => {
+      console.log("🟢 WebSocket connected to camera stream");
+    };
+
+    ws.onerror = (err) => {
+      console.error("❌ WebSocket error", err);
+    };
+
+    ws.onclose = () => {
+      console.warn("🔌 WebSocket closed");
     };
   </script>
 </body>
