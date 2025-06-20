@@ -2,40 +2,51 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Viewer</title>
+  <title>Send Camera</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { margin: 0; background: black; color: white; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; flex-direction: column; }
-    img { width: 100vw; height: 100vh; object-fit: contain; position: absolute; top: 0; left: 0; }
-    #status { z-index: 1; position: relative; background: rgba(0,0,0,0.6); padding: 10px 20px; border-radius: 10px; }
+    body { margin:0; background:black; color:white; font-family:sans-serif; }
+    video { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; object-fit: cover; z-index: 0; }
+    #status { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.6); padding: 10px 20px; border-radius: 10px; z-index: 1; font-size: 16px; }
   </style>
 </head>
 <body>
-  <img id="img" />
-  <div id="status">🔄 รอกล้องเชื่อมต่อ...</div>
-
+  <video id="video" autoplay playsinline muted></video>
+  <div id="status">📷 กำลังเปิดกล้อง...</div>
   <script>
-    const img = document.getElementById('img');
-    const statusText = document.getElementById('status');
+    const video = document.getElementById('video');
+    const statusBox = document.getElementById('status');
+    const ws = new WebSocket(location.origin.replace(/^http/, 'ws') + '/stream');
 
-    const ws = new WebSocket(location.origin.replace(/^http/, 'ws') + '/view');
+    async function startCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
 
-    ws.onopen = () => {
-      statusText.innerText = "🟢 เชื่อมต่อกับกล้องแล้ว กำลังรอภาพ...";
-    };
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
 
-    ws.onmessage = (event) => {
-      img.src = event.data;
-      statusText.style.display = 'none';
-    };
+        function sendFrame() {
+          if (video.videoWidth > 0 && video.videoHeight > 0) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0);
+            ws.send(canvas.toDataURL('image/jpeg', 0.5));
+            statusBox.innerText = "🟢 กล้องพร้อมแล้ว กำลังส่งภาพ...";
+          }
+          requestAnimationFrame(sendFrame);
+        }
 
-    ws.onerror = (e) => {
-      statusText.innerText = "❌ ไม่สามารถเชื่อมต่อ WebSocket ได้";
-    };
+        sendFrame();
+      } catch (err) {
+        let msg = "❌ ไม่สามารถเปิดกล้อง: " + err.name;
+        if (err.name === "NotAllowedError") msg += " (กรุณาอนุญาตการใช้กล้อง)";
+        if (err.name === "NotFoundError") msg += " (ไม่พบกล้อง)";
+        statusBox.innerText = msg;
+      }
+    }
 
-    ws.onclose = () => {
-      statusText.innerText = "🔌 การเชื่อมต่อถูกตัด กรุณารีเฟรชหน้า";
-    };
+    startCamera();
   </script>
 </body>
 </html>
