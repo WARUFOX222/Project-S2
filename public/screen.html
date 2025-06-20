@@ -1,8 +1,9 @@
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8" />
-  <title>📺 จอแสดงภาพจากกล้อง</title>
+  <meta charset="UTF-8">
+  <title>📺 หน้าจอรับภาพ</title>
   <style>
     body {
       margin: 0;
@@ -11,46 +12,21 @@
       justify-content: center;
       align-items: center;
       height: 100vh;
-      overflow: hidden;
     }
-    canvas {
-      width: 100vw;
-      height: 100vh;
-      object-fit: contain;
+    img {
+      max-width: 100%;
+      max-height: 100%;
     }
   </style>
 </head>
 <body>
-  <canvas id="canvas"></canvas>
+  <img id="viewer" alt="รอรับภาพ...">
   <script>
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
-    const img = new Image();
-
+    const img = document.getElementById('viewer');
     const ws = new WebSocket('wss://' + location.host + '/ws');
-
-    ws.binaryType = "blob";
-
     ws.onmessage = (event) => {
-      img.src = URL.createObjectURL(event.data);
-    };
-
-    img.onload = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    };
-
-    ws.onopen = () => {
-      console.log("🟢 WebSocket connected to camera stream");
-    };
-
-    ws.onerror = (err) => {
-      console.error("❌ WebSocket error", err);
-    };
-
-    ws.onclose = () => {
-      console.warn("🔌 WebSocket closed");
+      const blob = event.data;
+      img.src = URL.createObjectURL(blob);
     };
   </script>
 </body>
