@@ -1,32 +1,34 @@
-
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
 const app = express();
 
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server, path: '/ws' });
+
 app.use(express.static('public'));
 
-const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
-
-let viewer = null;
+let viewers = [];
 
 wss.on('connection', function connection(ws, req) {
-  const url = req.url;
-  if (url === '/stream') {
-    console.log("Mobile connected");
-    ws.on('message', function incoming(message) {
-      if (viewer && viewer.readyState === WebSocket.OPEN) {
-        viewer.send(message);
+  console.log("🟢 WebSocket connected");
+
+  ws.on('message', function incoming(message) {
+    for (let client of viewers) {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(message);
       }
-    });
-  } else if (url === '/view') {
-    console.log("Viewer connected");
-    viewer = ws;
-  }
+    }
+  });
+
+  viewers.push(ws);
+
+  ws.on('close', () => {
+    viewers = viewers.filter(client => client !== ws);
+  });
 });
 
 const port = process.env.PORT || 3000;
-server.listen(port, function() {
-  console.log('Listening on port ' + port);
+server.listen(port, () => {
+  console.log(`🚀 Server running on port ${port}`);
 });
