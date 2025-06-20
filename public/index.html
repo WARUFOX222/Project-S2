@@ -4,15 +4,26 @@
 <head>
   <title>Send Camera</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { margin:0; background:black; color:white; font-family:sans-serif; display:flex; align-items:center; justify-content:center; height:100vh; flex-direction:column }
+    video { width: 100vw; height: 100vh; object-fit: cover; position:absolute; top:0; left:0; z-index:0; }
+    #overlay { z-index:1; position:relative; background-color:rgba(0,0,0,0.5); padding:10px; border-radius:10px }
+  </style>
 </head>
-<body style="margin:0;overflow:hidden;background:black;">
-  <video id="video" autoplay playsinline style="transform:scaleX(-1);width:100vw;height:100vh;object-fit:cover;"></video>
+<body>
+  <video id="video" autoplay playsinline muted></video>
+  <div id="overlay">⏳ กำลังเปิดกล้อง...</div>
   <script>
     const video = document.getElementById('video');
+    const overlay = document.getElementById('overlay');
     const ws = new WebSocket(location.origin.replace(/^http/, 'ws') + '/stream');
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
-      .then(stream => {
+
+    async function startCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
         video.srcObject = stream;
+        overlay.style.display = 'none';
+
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
 
@@ -27,8 +38,22 @@
         };
 
         sendFrame();
-      })
-      .catch(err => alert("Cannot access camera: " + err));
+      } catch (err) {
+        let message = "ไม่สามารถเปิดกล้องได้ ❌\n";
+        if (err.name === "NotAllowedError") {
+          message += "➡️ กรุณาอนุญาตให้เข้าถึงกล้อง";
+        } else if (err.name === "NotFoundError") {
+          message += "➡️ ไม่พบอุปกรณ์กล้องในเครื่องนี้";
+        } else if (err.name === "NotReadableError") {
+          message += "➡️ กล้องถูกใช้งานอยู่ในแอปอื่น";
+        } else {
+          message += err.message;
+        }
+        overlay.innerText = message;
+      }
+    }
+
+    startCamera();
   </script>
 </body>
 </html>
