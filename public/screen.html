@@ -1,52 +1,28 @@
-
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Send Camera</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body { margin:0; background:black; color:white; font-family:sans-serif; }
-    video { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; object-fit: cover; z-index: 0; }
-    #status { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.6); padding: 10px 20px; border-radius: 10px; z-index: 1; font-size: 16px; }
-  </style>
+  <meta charset="UTF-8" />
+  <title>Screen</title>
 </head>
-<body>
-  <video id="video" autoplay playsinline muted></video>
-  <div id="status">📷 กำลังเปิดกล้อง...</div>
+<body style="margin:0; background:black;">
+  <canvas id="canvas" style="width:100vw; height:100vh;"></canvas>
   <script>
-    const video = document.getElementById('video');
-    const statusBox = document.getElementById('status');
-    const ws = new WebSocket(location.origin.replace(/^http/, 'ws') + '/stream');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const ws = new WebSocket('wss://' + location.hostname + '/ws');
 
-    async function startCamera() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        video.srcObject = stream;
+    const img = new Image();
 
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
+    ws.onmessage = (event) => {
+      const blob = new Blob([event.data], { type: 'image/jpeg' });
+      img.src = URL.createObjectURL(blob);
+    };
 
-        function sendFrame() {
-          if (video.videoWidth > 0 && video.videoHeight > 0) {
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            ctx.drawImage(video, 0, 0);
-            ws.send(canvas.toDataURL('image/jpeg', 0.5));
-            statusBox.innerText = "🟢 กล้องพร้อมแล้ว กำลังส่งภาพ...";
-          }
-          requestAnimationFrame(sendFrame);
-        }
-
-        sendFrame();
-      } catch (err) {
-        let msg = "❌ ไม่สามารถเปิดกล้อง: " + err.name;
-        if (err.name === "NotAllowedError") msg += " (กรุณาอนุญาตการใช้กล้อง)";
-        if (err.name === "NotFoundError") msg += " (ไม่พบกล้อง)";
-        statusBox.innerText = msg;
-      }
-    }
-
-    startCamera();
+    img.onload = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    };
   </script>
 </body>
 </html>
