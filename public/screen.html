@@ -3,11 +3,23 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8" />
-  <title>📺 จอรวมภาพ (สุ่มตำแหน่ง)</title>
+  <title>📺 จอรวมภาพ (พื้นหลังกลุ่มดาว)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { margin: 0; background: black; overflow: hidden; }
-    canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; }
+    body {
+      margin: 0;
+      background: url('https://assets.science.nasa.gov/dynamicimage/assets/science/astro/universe/2023/09/swift_M31_mosaic_1600.webp') no-repeat center center fixed;
+      background-size: cover;
+      overflow: hidden;
+    }
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 10;
+    }
   </style>
 </head>
 <body>
@@ -19,13 +31,11 @@
     canvas.height = window.innerHeight;
 
     const ws = new WebSocket(location.origin.replace(/^http/, 'ws') + '/ws');
-
     ws.binaryType = "arraybuffer";
 
     ws.onmessage = (event) => {
       const data = new Uint8Array(event.data);
       const roomLen = data[0]; // ความยาวชื่อห้อง
-      const room = new TextDecoder().decode(data.slice(1, 1 + roomLen));
       const blob = new Blob([data.slice(1 + roomLen)], { type: "image/jpeg" });
       const url = URL.createObjectURL(blob);
       const img = new Image();
