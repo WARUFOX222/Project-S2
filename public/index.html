@@ -1,59 +1,66 @@
 
 <!DOCTYPE html>
-<html>
+<html lang="th">
 <head>
-  <title>Send Camera</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <title>📷 ส่งภาพจากมือถือ</title>
   <style>
-    body { margin:0; background:black; color:white; font-family:sans-serif; display:flex; align-items:center; justify-content:center; height:100vh; flex-direction:column }
-    video { width: 100vw; height: 100vh; object-fit: cover; position:absolute; top:0; left:0; z-index:0; }
-    #overlay { z-index:1; position:relative; background-color:rgba(0,0,0,0.5); padding:10px; border-radius:10px }
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background-color: #000;
+      color: white;
+      font-family: sans-serif;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      justify-content: center;
+    }
+    video {
+      width: 90vw;
+      max-height: 60vh;
+      border: 2px solid white;
+      border-radius: 8px;
+    }
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 1.2em;
+      background-color: #00cc66;
+      border: none;
+      border-radius: 6px;
+      color: white;
+    }
   </style>
 </head>
 <body>
-  <video id="video" autoplay playsinline muted></video>
-  <div id="overlay">⏳ กำลังเปิดกล้อง...</div>
+  <video id="video" autoplay playsinline></video>
+  <button id="snap">📸 ถ่ายและส่งภาพ</button>
   <script>
     const video = document.getElementById('video');
-    const overlay = document.getElementById('overlay');
-    const ws = new WebSocket(location.origin.replace(/^http/, 'ws') + '/stream');
+    const button = document.getElementById('snap');
+    const canvas = document.createElement('canvas');
+    const ws = new WebSocket('wss://' + location.host + '/ws');
 
-    async function startCamera() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then((stream) => {
         video.srcObject = stream;
-        overlay.style.display = 'none';
+      })
+      .catch((err) => {
+        alert("❌ ไม่สามารถเข้าถึงกล้อง: " + err.message);
+      });
 
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-
-        const sendFrame = () => {
-          if (video.videoWidth > 0) {
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            ctx.drawImage(video, 0, 0);
-            ws.send(canvas.toDataURL('image/jpeg', 0.5));
-          }
-          requestAnimationFrame(sendFrame);
-        };
-
-        sendFrame();
-      } catch (err) {
-        let message = "ไม่สามารถเปิดกล้องได้ ❌\n";
-        if (err.name === "NotAllowedError") {
-          message += "➡️ กรุณาอนุญาตให้เข้าถึงกล้อง";
-        } else if (err.name === "NotFoundError") {
-          message += "➡️ ไม่พบอุปกรณ์กล้องในเครื่องนี้";
-        } else if (err.name === "NotReadableError") {
-          message += "➡️ กล้องถูกใช้งานอยู่ในแอปอื่น";
-        } else {
-          message += err.message;
+    button.onclick = () => {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0);
+      canvas.toBlob((blob) => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(blob);
         }
-        overlay.innerText = message;
-      }
-    }
-
-    startCamera();
+      }, 'image/jpeg');
+    };
   </script>
 </body>
 </html>
