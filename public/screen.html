@@ -1,0 +1,18 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Viewer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;overflow:hidden;background:black;">
+  <img id="img" style="width:100vw;height:100vh;object-fit:contain;" />
+  <script>
+    const img = document.getElementById('img');
+    const ws = new WebSocket(location.origin.replace(/^http/, 'ws') + '/view');
+    ws.onmessage = (event) => {
+      img.src = event.data;
+    };
+  </script>
+</body>
+</html>
