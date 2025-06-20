@@ -2,31 +2,41 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8">
-  <title>📺 หน้าจอรับภาพ</title>
+  <meta charset="UTF-8" />
+  <title>📺 จอรวมภาพ (สุ่มตำแหน่ง)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body {
-      margin: 0;
-      background-color: black;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-    }
-    img {
-      max-width: 100%;
-      max-height: 100%;
-    }
+    body { margin: 0; background: black; overflow: hidden; }
+    canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; }
   </style>
 </head>
 <body>
-  <img id="viewer" alt="รอรับภาพ...">
+  <canvas id="canvas"></canvas>
   <script>
-    const img = document.getElementById('viewer');
-    const ws = new WebSocket('wss://' + location.host + '/ws');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const ws = new WebSocket(location.origin.replace(/^http/, 'ws') + '/ws');
+
+    ws.binaryType = "arraybuffer";
+
     ws.onmessage = (event) => {
-      const blob = event.data;
-      img.src = URL.createObjectURL(blob);
+      const data = new Uint8Array(event.data);
+      const roomLen = data[0]; // ความยาวชื่อห้อง
+      const room = new TextDecoder().decode(data.slice(1, 1 + roomLen));
+      const blob = new Blob([data.slice(1 + roomLen)], { type: "image/jpeg" });
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+      img.onload = () => {
+        const w = canvas.width * 0.3;
+        const h = w * (img.height / img.width);
+        const x = Math.random() * (canvas.width - w);
+        const y = Math.random() * (canvas.height - h);
+        ctx.drawImage(img, x, y, w, h);
+      };
+      img.src = url;
     };
   </script>
 </body>
