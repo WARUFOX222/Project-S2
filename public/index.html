@@ -1,66 +1,79 @@
 
 <!DOCTYPE html>
-<html lang="th">
+<html>
 <head>
   <meta charset="UTF-8">
-  <title>📷 ส่งภาพจากมือถือ</title>
+  <title>📱 กล้องผู้ใช้</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      background-color: #000;
-      color: white;
-      font-family: sans-serif;
-      margin: 0;
-      padding: 0;
-      height: 100vh;
-      justify-content: center;
-    }
-    video {
-      width: 90vw;
-      max-height: 60vh;
-      border: 2px solid white;
-      border-radius: 8px;
-    }
-    button {
+    body { display:flex; flex-direction:column; align-items:center; justify-content:center; background:black; color:white; height:100vh; margin:0; font-family:sans-serif }
+    input { margin: 10px; padding: 10px; font-size: 1.2em; border-radius: 5px; border: none; width: 80%; }
+    video { width: 90vw; max-height: 60vh; border-radius: 10px; margin-top: 10px; }
+
+    #snap {
       margin-top: 20px;
-      padding: 10px 20px;
-      font-size: 1.2em;
-      background-color: #00cc66;
-      border: none;
-      border-radius: 6px;
-      color: white;
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      background: white;
+      border: 5px solid #ccc;
+      outline: none;
+      position: relative;
+      box-shadow: 0 0 0 4px rgba(255,255,255,0.2);
+    }
+
+    #snap:active {
+      background: #ddd;
+      box-shadow: 0 0 0 2px rgba(255,255,255,0.3);
     }
   </style>
 </head>
 <body>
-  <video id="video" autoplay playsinline></video>
-  <button id="snap">📸 ถ่ายและส่งภาพ</button>
+  <h2>📷 ส่งภาพขึ้นจอ</h2>
+  <input type="text" id="room" placeholder="กรอกชื่อห้อง เช่น room1">
+  <video id="video" autoplay playsinline muted></video>
+  <button id="snap"></button>
+  <audio id="shutter" src="https://cdn.pixabay.com/download/audio/2023/03/03/audio_a1ac6e2b89.mp3?filename=photo-camera-shutter-3-100382.mp3" preload="auto"></audio>
   <script>
     const video = document.getElementById('video');
     const button = document.getElementById('snap');
+    const roomInput = document.getElementById('room');
     const canvas = document.createElement('canvas');
-    const ws = new WebSocket('wss://' + location.host + '/ws');
+    const shutter = document.getElementById('shutter');
+    let ws = null;
 
     navigator.mediaDevices.getUserMedia({ video: true })
       .then((stream) => {
         video.srcObject = stream;
       })
-      .catch((err) => {
-        alert("❌ ไม่สามารถเข้าถึงกล้อง: " + err.message);
-      });
+      .catch((err) => alert("ไม่สามารถเปิดกล้อง: " + err));
 
     button.onclick = () => {
+      const room = roomInput.value.trim();
+      if (!room) return alert("กรุณากรอกชื่อห้อง");
+
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        ws = new WebSocket(location.origin.replace(/^http/, 'ws') + '/ws?room=' + room);
+        ws.onopen = () => {
+          takeAndSendImage();
+        };
+      } else {
+        takeAndSendImage();
+      }
+    };
+
+    function takeAndSendImage() {
+      shutter.currentTime = 0;
+      shutter.play();
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       canvas.getContext('2d').drawImage(video, 0, 0);
-      canvas.toBlob((blob) => {
-        if (ws.readyState === WebSocket.OPEN) {
+      canvas.toBlob(blob => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
           ws.send(blob);
         }
       }, 'image/jpeg');
-    };
+    }
   </script>
 </body>
 </html>
